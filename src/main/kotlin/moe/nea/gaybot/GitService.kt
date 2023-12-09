@@ -37,7 +37,7 @@ object GitService {
         commands.add("-c")
         commands.add("user.email=gaybot@notenoughupdates.org")
         commands.add("-c")
-        commands.add("core.sshCommand=ssh -i \"${sshFile.absolutePath}\" -o IdentitiesOnly=yes")
+        commands.add("core.sshCommand=ssh -i \"${sshFile.absolutePath}\" -o IdentitiesOnly=yes -o StrictHostKeyChecking=no")
 
         if (passRepoPath) {
             commands.add("-C")
@@ -92,7 +92,7 @@ object GitService {
     }
 
     suspend fun <T> useLock(inline: () -> T): T {
- return       mutex.withLock {
+        return mutex.withLock {
             withContext(Dispatchers.IO) {
                 inline()
             }
