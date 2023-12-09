@@ -24,7 +24,7 @@ jobs:
         uses: actions/upload-artifact@v3
         with:
           name: dist
-          path: app/build/distributions/app.zip
+          path: build/distributions/gaybot.zip
   publish:
     permissions:
       contents: read
@@ -49,11 +49,6 @@ jobs:
         uses: gradle/gradle-build-action@v2
       - name: Build with gradle
         run: ./gradlew build installDist --stacktrace
-      - name: Upload dist
-        uses: actions/upload-artifact@v3
-        with:
-          name: dist
-          path: app/build/distributions/app.zip
       - name: Log in to the Container registry
         uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
         with:
