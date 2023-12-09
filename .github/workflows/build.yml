@@ -1,0 +1,81 @@
+
+name: Build
+on:
+  - push
+  - pull_request
+
+jobs:
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+        name: Checkout repository
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Set up gradle cache
+        uses: gradle/gradle-build-action@v2
+      - name: Build with gradle
+        run: ./gradlew build distZip --stacktrace
+      - name: Upload dist
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist
+          path: app/build/distributions/app.zip
+  publish:
+    permissions:
+      contents: read
+      packages: write
+    name: Publish
+    runs-on: ubuntu-latest
+    needs:
+      - build
+    env:
+      REGISTRY: ghcr.io
+      IMAGE_NAME: ${{ github.repository }}
+    if: ${{ startswith(github.ref, 'refs/tags/') }}
+    steps:
+      - uses: actions/checkout@v3
+        name: Checkout repository
+      - name: Set up JDK 17
+        uses: actions/setup-java@v3
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Set up gradle cache
+        uses: gradle/gradle-build-action@v2
+      - name: Build with gradle
+        run: ./gradlew build installDist --stacktrace
+      - name: Upload dist
+        uses: actions/upload-artifact@v3
+        with:
+          name: dist
+          path: app/build/distributions/app.zip
+      - name: Log in to the Container registry
+        uses: docker/login-action@65b78e6e13532edd9afa3aa52ac7964289d1a9c1
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Extract metadata (tags, labels) for Docker
+        id: meta
+        uses: docker/metadata-action@9ec57ed1fcdbf14dcef7dfbe97b2010124a938b7
+        with:
+          images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+      - name: Print container layout
+        run: |
+          printf '# Docker container details\n\n<details><summary>Docker container layout</summary>\n```\n' >> $GITHUB_STEP_SUMMARY
+          tree >> $GITHUB_STEP_SUMMARY
+          printf '\n```\n</details>\n\n<details><summary>Dockerfile</summary>\n```Dockerfile\n' >> $GITHUB_STEP_SUMMARY
+          cat Dockerfile >> $GITHUB_STEP_SUMMARY
+          printf '\n```\n</details>' >> $GITHUB_STEP_SUMMARY
+      - name: Build and push Docker image
+        uses: docker/build-push-action@f2a1d5e99d037542a71f64918e516c093c6f3fc4
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
