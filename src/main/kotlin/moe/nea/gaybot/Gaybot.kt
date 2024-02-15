@@ -10,6 +10,7 @@ import dev.kord.core.behavior.interaction.response.respond
 import dev.kord.core.event.interaction.GuildChatInputCommandInteractionCreateEvent
 import dev.kord.core.on
 import dev.kord.rest.builder.interaction.string
+import dev.kord.rest.builder.message.allowedMentions
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.request.*
@@ -19,9 +20,10 @@ import kotlinx.coroutines.flow.onEach
 
 suspend fun main() {
     GitService.ensureInitialized()
-    GitService.checkoutBranch("master")
+    val masterBranch = "prerelease"
+    GitService.checkoutBranch(masterBranch)
     GitService.fetchRepo()
-    GitService.setHeadTo("origin/master")
+    GitService.setHeadTo("origin/$masterBranch")
 
     val kord = Kord(System.getenv("TOKEN"))
     val moulberryBushId = Snowflake(516977525906341928)
@@ -30,6 +32,7 @@ suspend fun main() {
     val client = HttpClient(CIO)
     BoosterNamesService.load()
 
+    kord.getGlobalApplicationCommands().onEach { it.delete() }
     val moulberryBush = kord.getGuild(moulberryBushId)
     moulberryBush.getApplicationCommands().onEach {
         it.delete()
@@ -55,8 +58,11 @@ suspend fun main() {
                 }
             }
         }
-        RainbowManager.setRainbowNamesInMisc(legacy)
         return GitService.useLock {
+            GitService.checkoutBranch(masterBranch)
+            GitService.fetchRepo()
+            GitService.setHeadTo("origin/$masterBranch")
+            RainbowManager.setRainbowNamesInMisc(legacy)
             GitService.commitFiles("Updated rainbownames", RainbowManager.miscFile)
             GitService.pushHeadTo("origin", "bot/rainbownames")
             GitService.parseCommit("HEAD")
@@ -82,7 +88,7 @@ suspend fun main() {
     }
     kord.on<GuildChatInputCommandInteractionCreateEvent> {
         if (interaction.command.rootName != "rainbowlink") return@on
-        if (boostRoleId !in interaction.user.roleIds) {
+        if (boostRoleId !in interaction.user.roleIds && maintainerRoleId !in interaction.user.roleIds) {
             interaction.respondEphemeral {
                 content =
                     "You are not currently boosting this server. Please boost the server in order to link your account and get a rainbow name in /pv. Check out `/pv Eisengolem` to see how it looks!"
@@ -90,16 +96,30 @@ suspend fun main() {
             return@on
         }
         val name = interaction.command.strings["mcname"]!!
-        require(name.matches("^[a-z0-9A-Z]{3,}$".toRegex()))
         val response = interaction.deferPublicResponse()
+        if (!name.matches("^[_a-z0-9A-Z]{3,16}$".toRegex())) {
+            response.respond {
+                content = "$name does not seeem to be a valid minecraft user name"
+                allowedMentions()
+            }
+            return@on
+        }
         val mojangText = client.get {
             url("https://api.ashcon.app/mojang/v2/user/$name")
         }.bodyAsText()
         val json = gson.fromJson(mojangText, JsonObject::class.java)
+        if (json["error"] != null) {
+            response.respond {
+                allowedMentions()
+                content = "Could not find uuid for $name: `${json["error"]}`"
+            }
+            return@on
+        }
         val uuid = json.getAsJsonPrimitive("uuid").asString.replace("-", "")
         BoosterNamesService.setUuid(interaction.user.id, uuid)
         BoosterNamesService.save()
         response.respond {
+            allowedMentions()
             content =
                 "Changed your linked username to $name (`$uuid`). Please be aware that it may take about a day until this change is applied. If it takes longer than a day for your name to become rainbowed in /pv, please update your repository."
         }

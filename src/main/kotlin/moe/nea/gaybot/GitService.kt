@@ -115,6 +115,8 @@ object GitService {
     fun checkoutBranch(branchname: String) {
         if (callGit("branch", "--", branchname).exitValue() == 0) {
             logger.info("Created branch $branchname")
+        } else {
+            logger.info("Did not create branch $branchname")
         }
         logger.info("Switching to branch $branchname")
         callGit("switch", "-f", "--", branchname)
