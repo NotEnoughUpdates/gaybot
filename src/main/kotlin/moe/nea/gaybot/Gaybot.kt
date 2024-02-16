@@ -99,7 +99,7 @@ suspend fun main() {
         val response = interaction.deferPublicResponse()
         if (!name.matches("^[_a-z0-9A-Z]{3,16}$".toRegex())) {
             response.respond {
-                content = "$name does not seeem to be a valid minecraft user name"
+                content = "$name does not seem to be a valid minecraft user name"
                 allowedMentions()
             }
             return@on
