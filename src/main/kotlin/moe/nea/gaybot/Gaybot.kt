@@ -97,7 +97,8 @@ suspend fun main() {
         }
         val name = interaction.command.strings["mcname"]!!
         val response = interaction.deferPublicResponse()
-        if (!name.matches("^[_a-z0-9A-Z]{3,16}$".toRegex())) {
+        if (!name.matches("^[_a-z0-9A-Z]{3,16}$".toRegex())
+            && !name.matches("^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$".toRegex())) {
             response.respond {
                 content = "$name does not seem to be a valid minecraft user name"
                 allowedMentions()
