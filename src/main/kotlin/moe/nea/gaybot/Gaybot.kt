@@ -52,7 +52,7 @@ suspend fun main() {
     suspend fun performGitUpdate(): String {
         val legacy = RainbowManager.getLegacyRainbowName().toMutableList()
         for ((user, uuid) in BoosterNamesService.getAllUsers()) {
-            if (boostRoleId in moulberryBush.getMember(user).roleIds) {
+            if (boostRoleId in (moulberryBush.getMemberOrNull(user)?.roleIds ?: emptySet())) {
                 if (uuid !in legacy) {
                     legacy.add(uuid)
                 }
