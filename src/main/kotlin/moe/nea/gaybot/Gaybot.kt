@@ -20,7 +20,7 @@ import kotlinx.coroutines.flow.onEach
 
 suspend fun main() {
     GitService.ensureInitialized()
-    val masterBranch = "prerelease"
+    val masterBranch = "master"
     GitService.checkoutBranch(masterBranch)
     GitService.fetchRepo()
     GitService.setHeadTo("origin/$masterBranch")
